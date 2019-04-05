@@ -27,9 +27,9 @@ log.info "\n"
 //     .ifEmpty { error "Cannot find genome fasta file: $params.genome." }
 //     .set { genome_fasta }
 Channel
-    .fromFilePairs(params.input +'*.{1,2}.fq')
+    .fromFilePairs(params.input) { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
+    //.fromFilePairs(params.input +'*.{1,2}.fq') { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     .ifEmpty { error "Cannot find any fq files: $params.input." }
-    .map{ file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     .set { fastq_files }
 
 Channel
@@ -37,11 +37,15 @@ Channel
     .ifEmpty { error "Cannot find kallisto index: $params.kallisto_index." }
     .set { kallisto_idx }
 
+Channel
+    .fromPath(params.star_index)
+    .ifEmpty { error "Cannot find kallisto index: $params.star_index." }
+    .set { star_idx }
 
 Channel
     .fromPath(params.annotation)
     .ifEmpty { error "Cannot find annotation file: $params.annotation." }
-    .into { align_annotation }
+    .set { align_annotation }
     //.into { index_annotation, align_annotation }
 
 
@@ -75,7 +79,7 @@ process quantify_kallisto{
     publishDir "$params.output/$name/kallisto", mode: 'copy', pattern: "$name/*"
 
     input:
-    set name, file(fastq) from fastq_quant.dump(tag: 'kallisto_input')
+    set name, file(fastq) from fastq_kallisto.dump(tag: 'kallisto_input')
     file index from kallisto_idx
 
     output:
@@ -95,7 +99,7 @@ process align_star{
     input:
     set name, file(fastq) from fastq_star.dump(tag: 'star_input')
     file index from star_idx
-    file anno from annotation
+    file anno from align_annotation
 
     output: 
     file "*"
