@@ -26,11 +26,8 @@ log.info "\n"
 //     .fromPath(params.genome)
 //     .ifEmpty { error "Cannot find genome fasta file: $params.genome." }
 //     .set { genome_fasta }
-
-
-
 Channel
-    .fromFilePairs("$params.input/*.{1,2}.fq")
+    .fromFilePairs(params.input +'*.{1,2}.fq')
     .ifEmpty { error "Cannot find any fq files: $params.input." }
     .map{ file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     .set { fastq_files }
