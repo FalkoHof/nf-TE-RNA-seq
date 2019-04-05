@@ -30,7 +30,7 @@ log.info "\n"
 
 
 Channel
-    .fromFilePairs('reads/*.{1,2}.fq')
+    .fromFilePairs("$params.input/*.{1,2}.fq")
     .ifEmpty { error "Cannot find any fq files: $params.input." }
     .map{ file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     .set { fastq_files }
