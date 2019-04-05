@@ -1,8 +1,8 @@
 #!/usr/bin/env nextflow
 
 params.kallisto_index='/lustre/scratch/projects/rnaseq_nod/indices/kallisto/Araport11_H2b-mCherry_cdna'
+params.annotation ='/lustre/scratch/projects/rnaseq_nod/indices/star/files/Araport11_TES_H2b-mCherry.gtf'
 params.star_index='/lustre/scratch/projects/rnaseq_nod/indices/star/araport_tetools/'
-params.annotation ='/lustre/scratch/projects/rnaseq_nod/indices/star/araport_tetools/'
 
 log.info "RNA-seq NF  ~  version 3.1"
 log.info "====================================="
