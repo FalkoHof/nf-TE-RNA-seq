@@ -79,8 +79,6 @@ process bam_to_fastq{
 
     tag "converting to fastq: $name"
 
-    publishDir "$params.output/$name/fastq", mode: 'copy'
-
     input:
     set name, file(bam) from sorted_bam.dump(tag: 'bam_to_fq')
     
@@ -97,7 +95,7 @@ process trim_adapters{
     
     tag "trimming: $name"
 
-    publishDir "$params.output/$name/trimmed", mode: 'copy'
+    publishDir "$params.output/$name/trimmed", mode: 'copy', pattern: "*_trimming_report.txt"
 
     input:
     set name, file(fastq) from fastq_files.dump(tag: 'trim_input')
@@ -128,7 +126,7 @@ process quantify_kallisto{
     file index from kallisto_idx.collect()
 
     output:
-    file "*.{tsv,h5,json}"
+    file "*"
     
     """
     kallisto quant -i $index -o ${name} ${name}.1_val_1.fq ${name}.2_val_2.fq
