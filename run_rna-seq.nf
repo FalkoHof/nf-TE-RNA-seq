@@ -14,18 +14,6 @@ log.info "annotation file: ${params.annotation}"
 log.info "\n"
 
 // input channels
-
-//Channel
-//    .fromPath(params.input)
-//    .splitCsv(header:true)
-//    .filter(row.sequencing.type == 'PE')
-//    .filter(row.file.type == 'bam')
-//    .map{ row-> tuple(row.sampleId, file(row.read1), file(row.read2)) }
-//    .set { samples_ch }
-// Channel
-//     .fromPath(params.genome)
-//     .ifEmpty { error "Cannot find genome fasta file: $params.genome." }
-//     .set { genome_fasta }
 //Channel
 //    .fromFilePairs(params.input)
 //	// { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
@@ -116,25 +104,24 @@ process trim_adapters{
 process quantify_kallisto{
 
     tag "quantifiying: $name"
-    
-    publishDir "$params.output/$name/kallisto", mode: 'copy', pattern: "$name/*", saveAs: { filename -> "$name_$filename" }
-    //publishDir "$params.output/$name/kallisto", mode: 'copy'
+    publishDir "$params.output/$name/kallisto", mode: 'copy'
+    //publishDir "$params.output/$name/kallisto", mode: 'copy', pattern: "${name}/*", saveAs: { filename -> "${name}_$filename" }
 
     input:
-    //file index, file(fastq)
     set name, file(fastq) from fastq_kallisto.dump(tag: 'kallisto_input')
     file index from kallisto_idx.collect()
 
     output:
-    file "*"
+    //file "${name}/*"
+    file "*.{tsv,h5,json}"
     
     """
     kallisto quant -i $index -o ${name} ${name}.1_val_1.fq ${name}.2_val_2.fq
+    mv ${name}/abundance.h5 ${name}_abundance.h5
+    mv ${name}/abundance.tsv ${name}_abundance.tsv
+    mv ${name}/run_info.json ${name}_run_info.json
+    rmdir ${name}
     """
-    //mv ${name}/abundance.h5 ${name}_abundance.h5
-    //mv ${name}/abundance.tsv ${name}_abundance.tsv
-    //mv ${name}/run_info.json ${name}_run_info.json
-    //rmdir ${name}
 }
 
 process align_star{
@@ -196,40 +183,6 @@ process align_star{
 //     """
 
 // }
-
-// process sort_bam{
-//         tag "sorting bam: $name"
-
-//         input:
-//         set name, file(bam) from bam_files(tag: 'input')
-
-//         output:
-//         set val(name), file("${name}.sorted.bam") into sorted_bam
-     
-//         """
-//         samtools sort -n -@ ${task.cpus} -o "${name}.sorted.bam" ${name}.bam
-//         """
-// }
-
-// process bam_to_fastq{
-
-//     tag "converting to fastq: $name"
-
-//     publishDir "$params.output/$name/fastq", mode: 'copy'
-
-//     input:
-//     set name, file(bam) from sorted_bam.dump(tag: 'bam_to_fq')
-    
-//     output:
-
-//     set name, file("*.fq") into fastq
- 
-//     """
-//     samtools fastq -1 ${name}.1.fq -2 ${name}.2.fq\
-//       -0 /dev/null -s /dev/null -N -F 0x900 -@ ${task.cpus} $bam
-//     """
-// }
-
 
 // process build_kallisto_index{   
 
