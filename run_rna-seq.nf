@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-params.kallisto_index='/lustre/scratch/projects/rnaseq_nod/indices/kallisto/Araport11_H2b-mCherry_cdna'
+params.kallisto_index='/lustre/scratch/projects/rnaseq_nod/indices/kallisto/araport11_all_H2b-mCherry'
 params.annotation ='/lustre/scratch/projects/rnaseq_nod/indices/star/files/Araport11_TES_H2b-mCherry.gtf'
 params.star_index='/lustre/scratch/projects/rnaseq_nod/indices/star/araport_tetools/'
 
@@ -27,7 +27,8 @@ log.info "\n"
 //     .ifEmpty { error "Cannot find genome fasta file: $params.genome." }
 //     .set { genome_fasta }
 Channel
-    .fromFilePairs(params.input) { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
+    .fromFilePairs(params.input)
+	// { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     //.fromFilePairs(params.input +'*.{1,2}.fq') { file -> tuple(file.name.replaceAll(/.{1,2}.fq$/,''), file) }
     .ifEmpty { error "Cannot find any fq files: $params.input." }
     .set { fastq_files }
@@ -51,12 +52,12 @@ Channel
 
 process trim_adapters{
     
-    tag "quantifiying: $name"
+    tag "trimming: $name"
 
-    publishDir "$params.output/$name/fastq/trimmed", mode: 'copy'
+    publishDir "$params.output/$name/trimmed", mode: 'copy'
 
     input:
-    set name, file("*.fq") from fastq_files.dump(tag: 'tim_input')
+    set name, file(fastq) from fastq_files.dump(tag: 'trim_input')
 
     output:
     file "*"
@@ -66,7 +67,6 @@ process trim_adapters{
     trim_galore --dont_gzip \
       --length 18 \
       --stringency 4 \
-      --cores ${task.cpus} \
       --paired ${name}.1.fq ${name}.2.fq
     """
 
@@ -76,17 +76,22 @@ process quantify_kallisto{
 
     tag "quantifiying: $name"
     
-    publishDir "$params.output/$name/kallisto", mode: 'copy', pattern: "$name/*"
+    publishDir "$params.output/$name/kallisto", mode: 'copy'
 
     input:
+    //file index, file(fastq)
     set name, file(fastq) from fastq_kallisto.dump(tag: 'kallisto_input')
-    file index from kallisto_idx
+    file index from kallisto_idx.collect()
 
     output:
-    file "*"
+    file "*.{tsv,h5,json}"
     
     """
-    kallisto quant -i $index -o $name ${name}_val_1.fq ${name}_val_2.fq
+    kallisto quant -i $index -o ${name} ${name}.1_val_1.fq ${name}.2_val_2.fq
+    mv ${name}/abundance.h5 ${name}_abundance.h5
+    mv ${name}/abundance.tsv ${name}_abundance.tsv
+    mv ${name}/run_info.json ${name}_run_info.json
+    rmdir ${name}
     """
 }
 
@@ -98,15 +103,14 @@ process align_star{
 
     input:
     set name, file(fastq) from fastq_star.dump(tag: 'star_input')
-    file index from star_idx
-    file anno from align_annotation
+    file index from star_idx.collect()
+    file anno from align_annotation.collect()
 
     output: 
     file "*"
 
     """
-    STAR
-    --runMode alignReads \
+    STAR --runMode alignReads \
     --alignIntronMax 5000 \
     --alignMatesGapMax 5500 \
     --alignSJDBoverhangMin 1 \
@@ -127,7 +131,7 @@ process align_star{
     --outSJfilterCountTotalMin -1 2 -1 -1 \
     --outSJfilterCountUniqueMin -1 2 -1 -1 \
     --outFileNamePrefix ${name}. \
-    --readFilesIn ${name}_val_1.fq ${name}_val_2.fq
+    --readFilesIn ${name}.1_val_1.fq  ${name}.2_val_2.fq
     """
 }
 
