@@ -65,7 +65,7 @@ process sort_bam{
         tag "sorting bam: $name"
 
         input:
-        set name, file(bam) from bam_files(tag: 'input')
+        set name, file(bam) from bam_files.dump(tag: 'input')
 
         output:
         set val(name), file("${name}.sorted.bam") into sorted_bam
